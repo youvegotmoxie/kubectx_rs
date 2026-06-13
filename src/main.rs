@@ -45,8 +45,9 @@ trait KubeContextTrait {
     ) -> Result<ParseKubeConfig, Box<dyn std::error::Error>>;
     fn get_all_clusters(kube_config: String) -> Result<Vec<String>, Box<dyn std::error::Error>>;
     fn set_context(
-        kube_config: String,
-        new_context: String,
+        kube_config: Value,
+        new_context: Value,
+        current_context: Value,
     ) -> Result<Value, Box<dyn std::error::Error>>;
 }
 
@@ -120,8 +121,11 @@ impl KubeContextTrait for ParseKubeConfig {
     }
 
     fn set_context(
-        _kube_config: String,
-        _new_context: String,
+        _kube_config: Value,
+        _new_context: Value,
+        _current_context: Value,
+        // This probably needs to be changed to some fs io result since
+        // it will eventually write changes to the filesystem
     ) -> Result<Value, Box<dyn std::error::Error>> {
         unimplemented!()
     }
