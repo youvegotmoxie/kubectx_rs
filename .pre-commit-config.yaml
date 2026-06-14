@@ -39,3 +39,17 @@ repos:
     rev: v0.15.15
     hooks:
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: rustfmt
+        description: Check if all files follow the rustfmt style
+        entry: cargo fmt --all -- --check --color always
+        language: system
+        pass_filenames: false
+      - id: cargo-check
+        name: cargo-check
+        description: Check if all files follow the rustfmt style
+        entry: cargo check --locked --all-targets
+        language: system
+        pass_filenames: false
