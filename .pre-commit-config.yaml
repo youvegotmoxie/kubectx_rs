@@ -23,7 +23,7 @@ repos:
         pass_filenames: false
       - id: cargo-check
         name: cargo-check
-        description: Check if all files follow the rustfmt style
-        entry: cargo check --locked --all-targets
+        description: Check a local package and all of its dependencies for errors
+        entry: cargo check --all-targets
         language: system
         pass_filenames: false

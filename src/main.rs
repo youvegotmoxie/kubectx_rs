@@ -5,15 +5,15 @@ use std::process::exit;
 extern crate yaml_serde;
 use yaml_serde::Value;
 
-// TODO: return an actual result and use ? instead of .unwrap()
-fn main() {
-    let input_context: Vec<String> = env::args().collect();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let new_context_cli_input: Vec<String> = env::args().collect();
 
-    let kubeconfig_path = build_kubeconfig_path().unwrap();
-    let kube_yaml = kubeconfig_to_yaml(kubeconfig_path.clone()).unwrap();
+    let kubeconfig_path = build_kubeconfig_path()?;
+    let kube_yaml = kubeconfig_to_yaml(kubeconfig_path.clone())?;
 
-    let new_context = Value::String(String::from(&input_context[1]));
-    set_context(&kubeconfig_path, &kube_yaml, new_context).unwrap();
+    let new_context = Value::String(String::from(&new_context_cli_input[1]));
+    set_context(&kubeconfig_path, &kube_yaml, new_context)?;
+    Ok(())
 }
 
 /// Builds the path to the kubeconfig file, either from the KUBECONFIG env var or the default path
@@ -85,38 +85,17 @@ fn set_context(
     if current_context != new_context {
         updated_yaml["current-context"] = new_context.into();
         println!(
-            "context set to {}",
+            "Updated the current context to use {}",
             updated_yaml["current-context"].as_str().unwrap()
         );
+        let yaml_data = yaml_serde::to_string(&updated_yaml)?;
+        std::fs::write(&kubeconfig, &yaml_data)?;
+        Ok(yaml_data)
     } else {
         println!(
-            "context is already set to {}",
+            "The cluster context is already set to {}",
             new_context.as_str().unwrap()
         );
         exit(0)
     }
-
-    let yaml_data = yaml_serde::to_string(&updated_yaml)?;
-
-    {
-        std::fs::write(&kubeconfig, &yaml_data)?;
-    }
-
-    Ok(yaml_data)
 }
-// what are we doing?
-// function 1
-// read KUBECONFIG
-// parse to get contexts
-//
-// function 2
-// list contexts to user
-// detect fzf and if fzf is available output to that (library?)
-//
-// have tab completion, if kubectx-rs is invoked with no arguments and no fzf
-// generate tab completion based on the contents of the context data structure
-//
-// function 3
-// set context to one chosen by user
-// this should take a user supplied cluster context; use what's selected from either tab completion, fzf input or stdin at runtime
-//
