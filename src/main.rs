@@ -28,8 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let all_cluster_names = list_all_contexts(&kube_yaml)?;
         if all_cluster_names.is_empty() {
-            eprintln!("No clusters found. The config file is either empty or malformed");
-            exit(1);
+            eprintln!("No clusters found. Kubeconfig file is either empty or malformed");
+            exit(0);
         }
         for name in all_cluster_names {
             println!("{}", name);
@@ -78,7 +78,6 @@ fn get_current_kube_context(
 }
 
 /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
-#[allow(dead_code)]
 fn list_all_contexts(kube_context_yaml: &Value) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut all_contexts = Vec::new();
     let contexts = kube_context_yaml["contexts"].as_sequence();
