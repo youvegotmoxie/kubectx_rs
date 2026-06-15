@@ -1,6 +1,10 @@
-pub mod build_config_path {
+pub mod setup_kubeconfig {
     use std::env;
     use std::path::PathBuf;
+    extern crate yaml_serde;
+    use std::fs::File;
+    use yaml_serde::Value;
+
     /// Builds the path to the kubeconfig file, either from the KUBECONFIG env var or the default path
     pub fn get_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
         let mut kubeconfig = PathBuf::new();
@@ -20,13 +24,6 @@ pub mod build_config_path {
         }
         Ok(kubeconfig)
     }
-}
-pub mod list_get_set_contexts {
-    extern crate yaml_serde;
-    use std::fs::File;
-    use std::path::PathBuf;
-    use std::process::exit;
-    use yaml_serde::Value;
 
     /// Reads the kubeconfig file and returns its contents as a yaml Value type
     pub fn kubeconfig_to_yaml(kubeconfig: PathBuf) -> Result<Value, Box<dyn std::error::Error>> {
@@ -35,11 +32,16 @@ pub mod list_get_set_contexts {
 
         Ok(yaml_data)
     }
+}
+
+pub mod list_get_set_contexts {
+    extern crate yaml_serde;
+    use std::path::PathBuf;
+    use std::process::exit;
+    use yaml_serde::Value;
 
     /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
-    pub fn get_current_kube_context(
-        kube_context_yaml: &Value,
-    ) -> Result<Value, Box<dyn std::error::Error>> {
+    pub fn get_current(kube_context_yaml: &Value) -> Result<Value, Box<dyn std::error::Error>> {
         let current_context = kube_context_yaml["current-context"]
             .as_str()
             .ok_or("current-context key not found")?;
@@ -74,7 +76,7 @@ pub mod list_get_set_contexts {
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut updated_yaml = kube_context_yaml.clone();
-        let current_context = get_current_kube_context(&kube_context_yaml)?;
+        let current_context = get_current(&kube_context_yaml)?;
 
         if current_context != new_context {
             updated_yaml["current-context"] = new_context.into();

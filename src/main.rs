@@ -3,7 +3,8 @@ use std::process::exit;
 extern crate yaml_serde;
 use yaml_serde::Value;
 mod cli;
-use cli::kubeconfig::{build_config_path::get_path, list_get_set_contexts::*};
+use cli::kubeconfig::list_get_set_contexts::*;
+use cli::kubeconfig::setup_kubeconfig::*;
 
 // TODO:
 // Add error handling for supplying invalid an cluster value, eg supplied input context isn't in the kubeconfig's map of clusters
