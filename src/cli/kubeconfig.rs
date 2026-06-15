@@ -1,12 +1,8 @@
-pub mod list_get_set_contexts {
-    extern crate yaml_serde;
+pub mod build_config_path {
     use std::env;
-    use std::fs::File;
     use std::path::PathBuf;
-    use std::process::exit;
-    use yaml_serde::Value;
     /// Builds the path to the kubeconfig file, either from the KUBECONFIG env var or the default path
-    pub fn build_kubeconfig_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    pub fn get_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
         let mut kubeconfig = PathBuf::new();
         // Create the path to ~/.kube/config for reading the file
         // Read the KUBECONFIG env var if set and use that
@@ -24,6 +20,13 @@ pub mod list_get_set_contexts {
         }
         Ok(kubeconfig)
     }
+}
+pub mod list_get_set_contexts {
+    extern crate yaml_serde;
+    use std::fs::File;
+    use std::path::PathBuf;
+    use std::process::exit;
+    use yaml_serde::Value;
 
     /// Reads the kubeconfig file and returns its contents as a yaml Value type
     pub fn kubeconfig_to_yaml(kubeconfig: PathBuf) -> Result<Value, Box<dyn std::error::Error>> {

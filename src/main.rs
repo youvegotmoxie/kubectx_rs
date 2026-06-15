@@ -3,6 +3,7 @@ use std::process::exit;
 extern crate yaml_serde;
 use yaml_serde::Value;
 mod cli;
+use cli::kubeconfig::build_config_path::*;
 use cli::kubeconfig::list_get_set_contexts::*;
 
 // TODO:
@@ -18,7 +19,7 @@ use cli::kubeconfig::list_get_set_contexts::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_args: Vec<String> = env::args().collect();
 
-    let path = build_kubeconfig_path()?;
+    let path = get_path()?;
     let path_buf = &path;
     let kube_yaml = kubeconfig_to_yaml(path_buf.to_path_buf())?;
 
