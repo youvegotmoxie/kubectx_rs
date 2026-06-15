@@ -25,6 +25,14 @@ pub mod setup_kubeconfig {
         Ok(kubeconfig)
     }
 
+    pub fn backup_config(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+        std::fs::copy(
+            &kubeconfig_path,
+            &kubeconfig_path.with_added_extension("kubectx_rs.bak"),
+        )?;
+        Ok(())
+    }
+
     /// Reads the kubeconfig file and returns its contents as a yaml Value type
     pub fn kubeconfig_to_yaml(kubeconfig: PathBuf) -> Result<Value, Box<dyn std::error::Error>> {
         let yaml_data: Value =
@@ -36,6 +44,7 @@ pub mod setup_kubeconfig {
 
 pub mod list_get_set_contexts {
     extern crate yaml_serde;
+    use crate::cli::kubeconfig::setup_kubeconfig::backup_config;
     use std::path::PathBuf;
     use std::process::exit;
     use yaml_serde::Value;
@@ -87,6 +96,7 @@ pub mod list_get_set_contexts {
                     .ok_or("current-context key not found")?
             );
             let yaml_data = yaml_serde::to_string(&updated_yaml)?;
+            backup_config(&kubeconfig.to_path_buf())?;
             std::fs::write(&kubeconfig, &yaml_data)?;
             Ok(yaml_data)
         } else {
