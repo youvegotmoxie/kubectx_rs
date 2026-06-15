@@ -1,13 +1,19 @@
 use std::env;
 use std::process::exit;
 extern crate yaml_serde;
-use kubectx_rs::*;
 use yaml_serde::Value;
+mod cli;
+use cli::kubeconfig::list_get_set_contexts::*;
 
 // TODO:
 // Add error handling for supplying invalid an cluster value, eg supplied input context isn't in the kubeconfig's map of clusters
 // Backup the kubeconfig before modifying the file
 // Make a copy of the original kubeconfig -> edit the copy -> move the copy to the original path -> delete
+// Ability to delete a context
+// Ability to unset the current context. this means changing how we handle the empty current-context key
+// Isolated shell with $KUBECONFIG set
+// `cd -` like ability to switch back to the previously set context -> ties into backup files
+// Ability to set the namespace for a given cluster context
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_args: Vec<String> = env::args().collect();
