@@ -78,6 +78,28 @@ pub mod list_get_set_contexts {
         Ok(all_contexts)
     }
 
+    pub fn validate_context(
+        kube_context_yaml: &Value,
+        new_context: Value,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let all_contexts = list_all_contexts(&kube_context_yaml)?;
+        let cname: String = String::from(new_context.as_str().unwrap());
+
+        for name in all_contexts {
+            if name == cname {
+                return Ok(name);
+            } else {
+                eprintln!(
+                    "This cluster could not be found: {}",
+                    new_context.as_str().unwrap()
+                );
+                exit(1)
+            }
+        }
+
+        Ok(cname)
+    }
+
     // if no context is supplied then print output of get_current_kube_context
     pub fn set_context(
         kubeconfig: &PathBuf,
@@ -86,6 +108,8 @@ pub mod list_get_set_contexts {
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut updated_yaml = kube_context_yaml.clone();
         let current_context = get_current(&kube_context_yaml)?;
+
+        validate_context(&updated_yaml, new_context.clone())?;
 
         if current_context != new_context {
             updated_yaml["current-context"] = new_context.into();
