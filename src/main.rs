@@ -1,5 +1,4 @@
 use std::env;
-use std::process::exit;
 extern crate yaml_serde;
 use yaml_serde::Value;
 mod cli;
@@ -32,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let all_cluster_names = list_all_contexts(&kube_yaml)?;
         if all_cluster_names.is_empty() {
             eprintln!("No clusters found. Kubeconfig file is either empty or malformed");
-            exit(0);
+            std::process::exit(1);
         }
         for name in all_cluster_names {
             println!("{}", name);

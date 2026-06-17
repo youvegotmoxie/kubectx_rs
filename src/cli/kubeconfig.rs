@@ -46,7 +46,6 @@ pub mod list_get_set_contexts {
     extern crate yaml_serde;
     use crate::cli::kubeconfig::setup_kubeconfig::backup_config;
     use std::path::PathBuf;
-    use std::process::exit;
     use yaml_serde::Value;
 
     /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
@@ -78,26 +77,24 @@ pub mod list_get_set_contexts {
         Ok(all_contexts)
     }
 
+    /// Checks that a user's chosen cluster exists in the kubeconfig
+    /// Takes a list of clusters and the user's chosen cluster name and
+    /// returns the cluster name if found
     pub fn validate_context(
         kube_context_yaml: &Value,
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let all_contexts = list_all_contexts(&kube_context_yaml)?;
-        let cname: String = String::from(new_context.as_str().unwrap());
+        let incoming_context_name: String = String::from(new_context.as_str().unwrap());
 
-        for name in all_contexts {
-            if name == cname {
-                return Ok(name);
-            } else {
-                eprintln!(
-                    "This cluster could not be found: {}",
-                    new_context.as_str().unwrap()
-                );
-                exit(1)
-            }
+        if all_contexts
+            .iter()
+            .any(|name| name == &incoming_context_name)
+        {
+            Ok(incoming_context_name)
+        } else {
+            Err("Cluster not found in config".into())
         }
-
-        Ok(cname)
     }
 
     // if no context is supplied then print output of get_current_kube_context
@@ -130,7 +127,7 @@ pub mod list_get_set_contexts {
                     .as_str()
                     .ok_or("Unable to get current-context key")?
             );
-            exit(0)
+            Err("Failed to set context".into())
         }
     }
 }
