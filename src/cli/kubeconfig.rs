@@ -25,6 +25,7 @@ pub mod setup_kubeconfig {
         Ok(kubeconfig)
     }
 
+    /// Creates a backup of the kubeconfig file `kubeconfigname.kubectx_rs.bak`
     pub fn backup_config(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::copy(
             &kubeconfig_path,
@@ -57,7 +58,7 @@ pub mod list_get_set_contexts {
         Ok(current_context.into())
     }
 
-    /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
+    /// Takes kubeconfig as YAML Value and returns all context (cluster) names
     pub fn list_all_contexts(
         kube_context_yaml: &Value,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -97,7 +98,7 @@ pub mod list_get_set_contexts {
         }
     }
 
-    // if no context is supplied then print output of get_current_kube_context
+    /// Sets the current-context in the kubeconfig, backing up the file before writing
     pub fn set_context(
         kubeconfig: &PathBuf,
         kube_context_yaml: &Value,
