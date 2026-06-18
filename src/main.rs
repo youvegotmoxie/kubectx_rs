@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(new_context) = input_args.get(1) {
         set_context(
-            &path_buf,
+            path_buf,
             &kube_yaml,
             Value::String(String::from(new_context)),
         )?;

@@ -100,7 +100,7 @@ pub mod list_get_set_contexts {
 
     /// Sets the current-context in the kubeconfig, backing up the file before writing
     pub fn set_context(
-        kubeconfig: &PathBuf,
+        kubeconfig: PathBuf,
         kube_context_yaml: &Value,
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
@@ -142,7 +142,7 @@ pub mod delete_rename_context {
     use yaml_serde::Value;
 
     fn delete_context(
-        kubeconfig: &PathBuf,
+        kubeconfig: PathBuf,
         cluster_name: Value,
         kube_config_yaml: &Value,
     ) -> Result<Value, Box<dyn std::error::Error>> {
