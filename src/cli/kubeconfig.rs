@@ -124,11 +124,12 @@ pub mod list_get_set_contexts {
         } else {
             println!(
                 "The cluster context is already set to {}",
-                new_context
-                    .as_str()
-                    .ok_or("Unable to get current-context key")?
+                new_context.as_str().unwrap()
             );
-            Err("Failed to set context".into())
+            Ok(new_context
+                .as_str()
+                .ok_or("Unable to get current-context key")?
+                .to_string())
         }
     }
 }
