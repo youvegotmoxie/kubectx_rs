@@ -11,7 +11,7 @@ pub mod setup_kubeconfig {
         // Create the path to ~/.kube/config for reading the file
         // Read the KUBECONFIG env var if set and use that
         match env::var("KUBECONFIG") {
-            Ok(kube_config_path) => kubeconfig.push(&kube_config_path),
+            Ok(kube_config_path) => kubeconfig.push(kube_config_path),
             // If no KUBECONFIG env var is set then use the HOME env var and tack on the rest of the default path
             Err(env::VarError::NotPresent) => {
                 kubeconfig.push(env::var("HOME")?);
@@ -37,7 +37,7 @@ pub mod setup_kubeconfig {
     /// Reads the kubeconfig file and returns its contents as a yaml Value type
     pub fn kubeconfig_to_yaml(kubeconfig: PathBuf) -> Result<Value, Box<dyn std::error::Error>> {
         let yaml_data: Value =
-            yaml_serde::from_str(&std::io::read_to_string(File::open(&kubeconfig)?)?)?;
+            yaml_serde::from_str(&std::io::read_to_string(File::open(kubeconfig)?)?)?;
 
         Ok(yaml_data)
     }
@@ -85,7 +85,7 @@ pub mod list_get_set_contexts {
         kube_context_yaml: &Value,
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let all_contexts = list_all_contexts(&kube_context_yaml)?;
+        let all_contexts = list_all_contexts(kube_context_yaml)?;
         let incoming_context_name: String = String::from(new_context.as_str().unwrap());
 
         if all_contexts
@@ -105,7 +105,7 @@ pub mod list_get_set_contexts {
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut updated_yaml = kube_context_yaml.clone();
-        let current_context = get_current(&kube_context_yaml)?;
+        let current_context = get_current(kube_context_yaml)?;
 
         validate_context(&updated_yaml, new_context.clone())?;
 
@@ -119,7 +119,7 @@ pub mod list_get_set_contexts {
             );
             let yaml_data = yaml_serde::to_string(&updated_yaml)?;
             backup_config(&kubeconfig.to_path_buf())?;
-            std::fs::write(&kubeconfig, &yaml_data)?;
+            std::fs::write(kubeconfig, &yaml_data)?;
             Ok(yaml_data)
         } else {
             println!(
@@ -130,5 +130,27 @@ pub mod list_get_set_contexts {
             );
             Err("Failed to set context".into())
         }
+    }
+}
+
+#[allow(dead_code)]
+pub mod delete_rename_context {
+    extern crate yaml_serde;
+    use crate::cli::kubeconfig::{list_get_set_contexts::validate_context, setup_kubeconfig::*};
+    use std::path::PathBuf;
+    use yaml_serde::Value;
+
+    fn delete_context(
+        kubeconfig: &PathBuf,
+        cluster_name: Value,
+        kube_config_yaml: &Value,
+    ) -> Result<Value, Box<dyn std::error::Error>> {
+        validate_context(kube_config_yaml, cluster_name)?;
+
+        let yaml_data = yaml_serde::to_string(kube_config_yaml)?;
+
+        backup_config(&kubeconfig.to_path_buf())?;
+        std::fs::write(kubeconfig, yaml_data)?;
+        todo!()
     }
 }
