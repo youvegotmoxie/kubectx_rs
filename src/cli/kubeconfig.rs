@@ -6,7 +6,7 @@ pub mod setup_kubeconfig {
     use yaml_serde::Value;
 
     /// Builds the path to the kubeconfig file, either from the KUBECONFIG env var or the default path
-    pub fn get_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    pub fn kubeconfig_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
         let mut kubeconfig = PathBuf::new();
         // Create the path to ~/.kube/config for reading the file
         // Read the KUBECONFIG env var if set and use that
@@ -26,7 +26,7 @@ pub mod setup_kubeconfig {
     }
 
     /// Creates a backup of the kubeconfig file `kubeconfigname.kubectx_rs.bak`
-    pub fn backup_config(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn backup_kubeconfig(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::copy(
             &kubeconfig_path,
             &kubeconfig_path.with_added_extension("kubectx_rs.bak"),
@@ -45,12 +45,14 @@ pub mod setup_kubeconfig {
 
 pub mod list_get_set_contexts {
     extern crate yaml_serde;
-    use crate::cli::kubeconfig::setup_kubeconfig::backup_config;
+    use crate::cli::kubeconfig::setup_kubeconfig::backup_kubeconfig;
     use std::path::PathBuf;
     use yaml_serde::Value;
 
     /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
-    pub fn get_current(kube_context_yaml: &Value) -> Result<Value, Box<dyn std::error::Error>> {
+    pub fn get_current_context(
+        kube_context_yaml: &Value,
+    ) -> Result<Value, Box<dyn std::error::Error>> {
         let current_context = kube_context_yaml["current-context"]
             .as_str()
             .ok_or("current-context key not found")?;
@@ -105,7 +107,7 @@ pub mod list_get_set_contexts {
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut updated_yaml = kube_context_yaml.clone();
-        let current_context = get_current(kube_context_yaml)?;
+        let current_context = get_current_context(kube_context_yaml)?;
 
         validate_context(&updated_yaml, new_context.clone())?;
 
@@ -118,7 +120,7 @@ pub mod list_get_set_contexts {
                     .ok_or("current-context key not found")?
             );
             let yaml_data = yaml_serde::to_string(&updated_yaml)?;
-            backup_config(&kubeconfig.to_path_buf())?;
+            backup_kubeconfig(&kubeconfig.to_path_buf())?;
             std::fs::write(kubeconfig, &yaml_data)?;
             Ok(yaml_data)
         } else {
@@ -150,7 +152,7 @@ pub mod delete_rename_context {
 
         let yaml_data = yaml_serde::to_string(kube_config_yaml)?;
 
-        backup_config(&kubeconfig.to_path_buf())?;
+        backup_kubeconfig(&kubeconfig.to_path_buf())?;
         std::fs::write(kubeconfig, yaml_data)?;
         todo!()
     }

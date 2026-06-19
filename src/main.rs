@@ -17,7 +17,7 @@ use cli::kubeconfig::setup_kubeconfig::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_args: Vec<String> = env::args().collect();
 
-    let path = get_path()?;
+    let path = kubeconfig_path()?;
     let path_buf = path;
     let kube_yaml = kubeconfig_to_yaml(path_buf.to_path_buf())?;
 
