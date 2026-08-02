@@ -6,13 +6,6 @@ use cli::kubeconfig::delete_rename_context::*;
 use cli::kubeconfig::list_get_set_contexts::*;
 use cli::kubeconfig::setup_kubeconfig::*;
 
-// TODO:
-// Make a copy of the original kubeconfig -> edit the copy -> move the copy to the original path -> delete
-// Ability to unset the current context. this means changing how we handle the empty current-context key
-// Isolated shell with $KUBECONFIG set
-// `cd -` like ability to switch back to the previously set context -> ties into backup files
-// Ability to set the namespace for a given cluster context
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_args: Vec<String> = env::args().collect();
 
