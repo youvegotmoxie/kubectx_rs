@@ -7,9 +7,7 @@ use cli::kubeconfig::list_get_set_contexts::*;
 use cli::kubeconfig::setup_kubeconfig::*;
 
 // TODO:
-// Add error handling for supplying invalid an cluster value, eg supplied input context isn't in the kubeconfig's map of clusters
 // Make a copy of the original kubeconfig -> edit the copy -> move the copy to the original path -> delete
-// Ability to delete a context
 // Ability to unset the current context. this means changing how we handle the empty current-context key
 // Isolated shell with $KUBECONFIG set
 // `cd -` like ability to switch back to the previously set context -> ties into backup files
