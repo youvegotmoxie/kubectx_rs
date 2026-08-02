@@ -136,24 +136,46 @@ pub mod list_get_set_contexts {
     }
 }
 
-#[allow(dead_code)]
 pub mod delete_rename_context {
     extern crate yaml_serde;
     use crate::cli::kubeconfig::{list_get_set_contexts::validate_context, setup_kubeconfig::*};
     use std::path::PathBuf;
     use yaml_serde::Value;
 
-    fn delete_context(
+    /// Deletes a context from the kubeconfig
+    pub fn delete_context(
         kubeconfig: PathBuf,
         cluster_name: Value,
         kube_config_yaml: &Value,
     ) -> Result<Value, Box<dyn std::error::Error>> {
-        validate_context(kube_config_yaml, cluster_name)?;
+        // Ensure the cluster name exists as a context entry
+        let context = validate_context(kube_config_yaml, cluster_name.clone())?;
 
-        let yaml_data = yaml_serde::to_string(kube_config_yaml)?;
+        let mut deleted_yaml = kube_config_yaml.clone();
 
+        // Read all the contexts into a Vec<Value>
+        let contexts = deleted_yaml["contexts"]
+            .as_sequence_mut()
+            .ok_or("Contexts mapping not found in KUBECONFIG")?;
+
+        // If the supplied cluster name matches, remove it from the Vec<Value>
+        contexts.retain(|ctx| match ctx["name"].as_str() {
+            Some(name) => name != context,
+            None => true,
+        });
+
+        // If the deleted context is the current context set current-context to an empty value
+        if deleted_yaml["current-context"].as_str() == Some(context.as_str()) {
+            deleted_yaml["current-context"] = Value::String(String::new());
+        }
+
+        let yaml_data = yaml_serde::to_string(&deleted_yaml)?;
+
+        // Backup the kubeconfig before modifying it
         backup_kubeconfig(&kubeconfig.to_path_buf())?;
+
         std::fs::write(kubeconfig, yaml_data)?;
-        todo!()
+        println!("Deleted context {}", context);
+        Ok(deleted_yaml)
     }
 }
