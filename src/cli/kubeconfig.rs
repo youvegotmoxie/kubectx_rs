@@ -67,6 +67,7 @@ pub mod list_get_set_contexts {
         let mut all_contexts = Vec::new();
         let contexts = kube_context_yaml["contexts"].as_sequence();
 
+        // Iterate through the contexts and extract the cluster names
         if let Some(contexts) = contexts {
             for ctx in contexts {
                 all_contexts.push(
@@ -158,7 +159,7 @@ pub mod delete_rename_context {
             .as_sequence_mut()
             .ok_or("Contexts mapping not found in KUBECONFIG")?;
 
-        // If the supplied cluster name matches, remove it from the Vec<Value>
+        // If the supplied cluster name matches keep it, otherwise remove it from the Vec<Value>
         contexts.retain(|ctx| match ctx["name"].as_str() {
             Some(name) => name != context,
             None => true,
