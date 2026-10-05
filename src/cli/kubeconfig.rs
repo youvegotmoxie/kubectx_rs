@@ -49,6 +49,18 @@ pub mod list_get_set_contexts {
     use std::path::PathBuf;
     use yaml_serde::Value;
 
+    /// Copies the kubeconfig to a temp file, edits that, then copies it back
+    pub fn copy_and_edit(
+        kubeconfig: &PathBuf,
+        data: &String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let temp_ext = String::from("kubectx_rs.staged");
+        std::fs::copy(&kubeconfig, &kubeconfig.with_added_extension(&temp_ext))?;
+        std::fs::write(kubeconfig.with_added_extension(&temp_ext), &data)?;
+        std::fs::rename(&kubeconfig.with_added_extension(&temp_ext), &kubeconfig)?;
+        Ok(())
+    }
+
     /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
     pub fn get_current_context(
         kube_context_yaml: &Value,
@@ -120,14 +132,10 @@ pub mod list_get_set_contexts {
                     .as_str()
                     .ok_or("current-context key not found")?
             );
+
             let yaml_data = yaml_serde::to_string(&updated_yaml)?;
             backup_kubeconfig(&kubeconfig.to_path_buf())?;
-
-            // // Copy the kubeconfig to a temp file, edit that, then copy it back
-            let temp_ext = String::from("kubectx_rs.staged");
-            std::fs::copy(&kubeconfig, &kubeconfig.with_added_extension(&temp_ext))?;
-            std::fs::write(kubeconfig.with_added_extension(&temp_ext), &yaml_data)?;
-            std::fs::rename(&kubeconfig.with_added_extension(&temp_ext), &kubeconfig)?;
+            copy_and_edit(&kubeconfig, &yaml_data)?;
 
             Ok(yaml_data)
         } else {
@@ -145,7 +153,10 @@ pub mod list_get_set_contexts {
 
 pub mod delete_rename_context {
     extern crate yaml_serde;
-    use crate::cli::kubeconfig::{list_get_set_contexts::validate_context, setup_kubeconfig::*};
+    use crate::cli::kubeconfig::{
+        list_get_set_contexts::{copy_and_edit, validate_context},
+        setup_kubeconfig::*,
+    };
     use std::path::PathBuf;
     use yaml_serde::Value;
 
@@ -180,8 +191,8 @@ pub mod delete_rename_context {
 
         // Backup the kubeconfig before modifying it
         backup_kubeconfig(&kubeconfig.to_path_buf())?;
+        copy_and_edit(&kubeconfig, &yaml_data)?;
 
-        std::fs::write(kubeconfig, yaml_data)?;
         println!("Deleted context {}", context);
         Ok(deleted_yaml)
     }
