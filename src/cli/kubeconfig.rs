@@ -5,7 +5,18 @@ pub mod setup_kubeconfig {
     use std::fs::File;
     use yaml_serde::Value;
 
-    /// Builds the path to the kubeconfig file, either from the KUBECONFIG env var or the default path
+    /// Builds the path to the kubeconfig file.
+    ///
+    /// Resolution order:
+    /// 1. The `KUBECONFIG` environment variable, if set (used verbatim)
+    /// 2. Otherwise, the default location `$HOME/.kube/config`
+    ///
+    /// # Returns
+    /// The resolved kubeconfig file path, or an error if the `HOME` environment
+    /// variable is not set.
+    ///
+    /// # Panics
+    /// Panics if the `KUBECONFIG` environment variable contains invalid Unicode.
     pub fn kubeconfig_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
         let mut kubeconfig = PathBuf::new();
         // Create the path to ~/.kube/config for reading the file
@@ -25,7 +36,14 @@ pub mod setup_kubeconfig {
         Ok(kubeconfig)
     }
 
-    /// Creates a backup of the kubeconfig file `kubeconfigname.kubectx_rs.bak`
+    /// Creates a backup of the kubeconfig file as `<kubeconfig>.kubectx_rs.bak`.
+    ///
+    /// # Arguments
+    /// * `kubeconfig_path` - Path to the existing kubeconfig file to back up
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be copied (e.g. it does not exist
+    /// or is not readable).
     pub fn backup_kubeconfig(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::copy(
             &kubeconfig_path,
@@ -34,7 +52,16 @@ pub mod setup_kubeconfig {
         Ok(())
     }
 
-    /// Reads the kubeconfig file and returns its contents as a yaml Value type
+    /// Reads the kubeconfig file and parses its contents into a YAML `Value`.
+    ///
+    /// # Arguments
+    /// * `kubeconfig` - Path to the kubeconfig file to read (consumed by this call)
+    ///
+    /// # Returns
+    /// The parsed YAML document as a `Value`.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be opened, read, or parsed as YAML.
     pub fn kubeconfig_to_yaml(kubeconfig: PathBuf) -> Result<Value, Box<dyn std::error::Error>> {
         let yaml_data: Value =
             yaml_serde::from_str(&std::io::read_to_string(File::open(kubeconfig)?)?)?;
@@ -43,13 +70,23 @@ pub mod setup_kubeconfig {
     }
 }
 
-pub mod list_get_set_contexts {
+pub mod mutate_contexts {
     extern crate yaml_serde;
     use crate::cli::kubeconfig::setup_kubeconfig::backup_kubeconfig;
     use std::path::PathBuf;
     use yaml_serde::Value;
 
-    /// Copies the kubeconfig to a temp file, edits that, then copies it back
+    /// Atomically replaces the kubeconfig file with new contents via a staged temp file.
+    ///
+    /// Copies the kubeconfig to `<kubeconfig>.kubectx_rs.staged`, writes the new
+    /// data into the staged file, then renames it over the original.
+    ///
+    /// # Arguments
+    /// * `kubeconfig` - Path to the kubeconfig file to update
+    /// * `data` - The complete new YAML contents to write
+    ///
+    /// # Errors
+    /// Returns an error if any of the copy, write, or rename steps fail.
     pub fn copy_and_edit(
         kubeconfig: &PathBuf,
         data: &String,
@@ -61,7 +98,16 @@ pub mod list_get_set_contexts {
         Ok(())
     }
 
-    /// Takes kubeconfig as YAML Value from kubeconfig_to_yaml and returns the current context
+    /// Returns the value of the `current-context` key from the kubeconfig YAML.
+    ///
+    /// # Arguments
+    /// * `kube_context_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    ///
+    /// # Returns
+    /// A `Value` holding the current context name.
+    ///
+    /// # Errors
+    /// Returns an error if the `current-context` key is missing or is not a string.
     pub fn get_current_context(
         kube_context_yaml: &Value,
     ) -> Result<Value, Box<dyn std::error::Error>> {
@@ -72,7 +118,16 @@ pub mod list_get_set_contexts {
         Ok(current_context.into())
     }
 
-    /// Takes kubeconfig as YAML Value and returns all context (cluster) names
+    /// Returns the names of every context (cluster) defined in the kubeconfig YAML.
+    ///
+    /// # Arguments
+    /// * `kube_context_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    ///
+    /// # Returns
+    /// A `Vec<String>` of context names. Empty if the `contexts` key is absent.
+    ///
+    /// # Errors
+    /// Returns an error if any context entry is missing its `name` key.
     pub fn list_all_contexts(
         kube_context_yaml: &Value,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -93,9 +148,18 @@ pub mod list_get_set_contexts {
         Ok(all_contexts)
     }
 
-    /// Checks that a user's chosen cluster exists in the kubeconfig
-    /// Takes a list of clusters and the user's chosen cluster name and
-    /// returns the cluster name if found
+    /// Checks that the chosen context exists in the kubeconfig.
+    ///
+    /// # Arguments
+    /// * `kube_context_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    /// * `new_context` - The context name the user wants to switch to (as a string `Value`)
+    ///
+    /// # Returns
+    /// The validated context name as a `String`.
+    ///
+    /// # Errors
+    /// Returns an error if the context is not present in the kubeconfig,
+    /// or is not a string.
     pub fn validate_context(
         kube_context_yaml: &Value,
         new_context: Value,
@@ -113,7 +177,21 @@ pub mod list_get_set_contexts {
         }
     }
 
-    /// Sets the current-context in the kubeconfig, backing up the file before writing
+    /// Sets `current-context` in the kubeconfig to `new_context`, backing up the
+    /// file before writing. No write occurs if `new_context` is already the
+    /// current context.
+    ///
+    /// # Arguments
+    /// * `kubeconfig` - Path to the kubeconfig file to update (consumed by this call)
+    /// * `kube_context_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    /// * `new_context` - The context name to switch to (as a string `Value`)
+    ///
+    /// # Returns
+    /// The updated YAML document serialized as a `String`.
+    ///
+    /// # Errors
+    /// Returns an error if the context does not exist, the YAML cannot be
+    /// serialized, or the backup/write steps fail.
     pub fn set_context(
         kubeconfig: PathBuf,
         kube_context_yaml: &Value,
@@ -149,18 +227,24 @@ pub mod list_get_set_contexts {
                 .to_string())
         }
     }
-}
 
-pub mod delete_rename_context {
-    extern crate yaml_serde;
-    use crate::cli::kubeconfig::{
-        list_get_set_contexts::{copy_and_edit, validate_context},
-        setup_kubeconfig::*,
-    };
-    use std::path::PathBuf;
-    use yaml_serde::Value;
-
-    /// Deletes a context from the kubeconfig
+    /// Deletes the given context from the kubeconfig, backing up the file
+    /// before writing.
+    ///
+    /// If the deleted context is also the current context, `current-context`
+    /// is reset to an empty string.
+    ///
+    /// # Arguments
+    /// * `kubeconfig` - Path to the kubeconfig file to update (consumed by this call)
+    /// * `cluster_name` - The context name to delete (as a string `Value`)
+    /// * `kube_config_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    ///
+    /// # Returns
+    /// The updated YAML document after the context has been removed.
+    ///
+    /// # Errors
+    /// Returns an error if the context does not exist, the YAML cannot be
+    /// serialized, or the backup/write steps fail.
     pub fn delete_context(
         kubeconfig: PathBuf,
         cluster_name: Value,

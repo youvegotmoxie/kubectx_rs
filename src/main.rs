@@ -2,8 +2,7 @@ use clap::Parser;
 
 mod cli;
 use cli::args::Cli;
-use cli::kubeconfig::delete_rename_context::*;
-use cli::kubeconfig::list_get_set_contexts::*;
+use cli::kubeconfig::mutate_contexts::*;
 use cli::kubeconfig::setup_kubeconfig::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
