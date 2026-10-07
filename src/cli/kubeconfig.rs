@@ -46,8 +46,8 @@ pub mod setup_kubeconfig {
     /// or is not readable).
     pub fn backup_kubeconfig(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::copy(
-            &kubeconfig_path,
-            &kubeconfig_path.with_added_extension("kubectx_rs.bak"),
+            kubeconfig_path,
+            kubeconfig_path.with_added_extension("kubectx_rs.bak"),
         )?;
         Ok(())
     }
@@ -92,9 +92,9 @@ pub mod mutate_contexts {
         data: &String,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let temp_ext = String::from("kubectx_rs.staged");
-        std::fs::copy(&kubeconfig, &kubeconfig.with_added_extension(&temp_ext))?;
-        std::fs::write(kubeconfig.with_added_extension(&temp_ext), &data)?;
-        std::fs::rename(&kubeconfig.with_added_extension(&temp_ext), &kubeconfig)?;
+        std::fs::copy(kubeconfig, kubeconfig.with_added_extension(&temp_ext))?;
+        std::fs::write(kubeconfig.with_added_extension(&temp_ext), data)?;
+        std::fs::rename(kubeconfig.with_added_extension(&temp_ext), kubeconfig)?;
         Ok(())
     }
 
@@ -203,7 +203,7 @@ pub mod mutate_contexts {
         validate_context(&updated_yaml, new_context.clone())?;
 
         if current_context != new_context {
-            updated_yaml["current-context"] = new_context.into();
+            updated_yaml["current-context"] = new_context;
             println!(
                 "Updated the current context to use {}",
                 updated_yaml["current-context"]
