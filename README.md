@@ -9,3 +9,4 @@ Currently supports:
 * Listing contexts
 * Setting contexts
 * Deleting contexts
+* Setting namespaces
