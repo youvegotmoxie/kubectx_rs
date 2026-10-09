@@ -30,6 +30,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             set_context(path, &kube_yaml, name)?;
         }
+        // If -n/--namespace is set, set the namespace for the current context
+        Cli {
+            namespace: Some(name),
+            ..
+        } => {
+            set_namespace(path, &kube_yaml, name)?;
+        }
         // Default (no-args) command lists all contexts
         _ => {
             let output = list_all_contexts(&kube_yaml)?;

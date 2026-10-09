@@ -8,6 +8,9 @@ pub struct Cli {
     #[arg(short, long, value_name = "NAME")]
     pub delete: Option<Value>,
 
+    #[arg(short, long, value_name = "NAMESPACE")]
+    pub namespace: Option<Value>,
+
     #[arg(short, long, value_name = "PATH")]
     pub config: Option<PathBuf>,
 

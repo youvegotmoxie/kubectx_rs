@@ -1,6 +1,6 @@
 pub mod setup_kubeconfig {
     use std::env;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     extern crate yaml_serde;
     use std::fs::File;
     use yaml_serde::Value;
@@ -44,7 +44,7 @@ pub mod setup_kubeconfig {
     /// # Errors
     /// Returns an error if the file cannot be copied (e.g. it does not exist
     /// or is not readable).
-    pub fn backup_kubeconfig(kubeconfig_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn backup_kubeconfig(kubeconfig_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::copy(
             kubeconfig_path,
             kubeconfig_path.with_added_extension("kubectx_rs.bak"),
@@ -73,7 +73,7 @@ pub mod setup_kubeconfig {
 pub mod mutate_contexts {
     extern crate yaml_serde;
     use crate::cli::kubeconfig::setup_kubeconfig::backup_kubeconfig;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use yaml_serde::Value;
 
     /// Atomically replaces the kubeconfig file with new contents via a staged temp file.
@@ -82,19 +82,16 @@ pub mod mutate_contexts {
     /// data into the staged file, then renames it over the original.
     ///
     /// # Arguments
-    /// * `kubeconfig` - Path to the kubeconfig file to update
+    /// * `config_path` - Path to the kubeconfig file to update
     /// * `data` - The complete new YAML contents to write
     ///
     /// # Errors
     /// Returns an error if any of the copy, write, or rename steps fail.
-    pub fn copy_and_edit(
-        kubeconfig: &PathBuf,
-        data: &String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn copy_and_edit(config_path: &Path, data: &str) -> Result<(), Box<dyn std::error::Error>> {
         let temp_ext = String::from("kubectx_rs.staged");
-        std::fs::copy(kubeconfig, kubeconfig.with_added_extension(&temp_ext))?;
-        std::fs::write(kubeconfig.with_added_extension(&temp_ext), data)?;
-        std::fs::rename(kubeconfig.with_added_extension(&temp_ext), kubeconfig)?;
+        std::fs::copy(config_path, config_path.with_added_extension(&temp_ext))?;
+        std::fs::write(config_path.with_added_extension(&temp_ext), data)?;
+        std::fs::rename(config_path.with_added_extension(&temp_ext), config_path)?;
         Ok(())
     }
 
@@ -193,7 +190,7 @@ pub mod mutate_contexts {
     /// Returns an error if the context does not exist, the YAML cannot be
     /// serialized, or the backup/write steps fail.
     pub fn set_context(
-        kubeconfig: PathBuf,
+        config_path: PathBuf,
         kube_context_yaml: &Value,
         new_context: Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
@@ -212,8 +209,8 @@ pub mod mutate_contexts {
             );
 
             let yaml_data = yaml_serde::to_string(&updated_yaml)?;
-            backup_kubeconfig(&kubeconfig.to_path_buf())?;
-            copy_and_edit(&kubeconfig, &yaml_data)?;
+            backup_kubeconfig(&config_path)?;
+            copy_and_edit(&config_path, &yaml_data)?;
 
             Ok(yaml_data)
         } else {
@@ -226,6 +223,36 @@ pub mod mutate_contexts {
                 .ok_or("Unable to get current-context key")?
                 .to_string())
         }
+    }
+
+    pub fn set_namespace(
+        config_path: PathBuf,
+        kube_context_yaml: &Value,
+        namespace: Value,
+    ) -> Result<Value, Box<dyn std::error::Error>> {
+        let mut updated_yaml = kube_context_yaml.clone();
+        let current_context = get_current_context(&kube_context_yaml)?;
+
+        // i have a mutable clone of update_yaml I can replace later with the new namespace
+        // i have the name of the currently set context
+        // data structure
+        //   "contexts": [
+        //    {
+        //      "context": {
+        //        "cluster": "orbstack",
+        //        "user": "orbstack",
+        //        "namespace": "default"
+        //      },
+        //      "name": "orbstack"
+        //    }
+        // ],
+        // "current-context": "orbstack",
+        //
+        // iterate through contexts[] and match corrent context, then add or set namespace: for that cluster
+        for current in updated_yaml["contexts"].as_str() {
+            println!("hi {:?}", current);
+        }
+        Ok(updated_yaml)
     }
 
     /// Deletes the given context from the kubeconfig, backing up the file
@@ -274,7 +301,7 @@ pub mod mutate_contexts {
         let yaml_data = yaml_serde::to_string(&deleted_yaml)?;
 
         // Backup the kubeconfig before modifying it
-        backup_kubeconfig(&kubeconfig.to_path_buf())?;
+        backup_kubeconfig(&kubeconfig)?;
         copy_and_edit(&kubeconfig, &yaml_data)?;
 
         println!("Deleted context {}", context);
