@@ -159,7 +159,7 @@ pub mod mutate_contexts {
     /// or is not a string.
     pub fn validate_context(
         kube_context_yaml: &Value,
-        new_context: Value,
+        new_context: &Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let all_contexts = list_all_contexts(kube_context_yaml)?;
         let incoming_context_name: String = String::from(new_context.as_str().unwrap());
@@ -192,15 +192,15 @@ pub mod mutate_contexts {
     pub fn set_context(
         config_path: PathBuf,
         kube_context_yaml: &Value,
-        new_context: Value,
+        new_context: &Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut updated_yaml = kube_context_yaml.clone();
         let current_context = get_current_context(kube_context_yaml)?;
 
-        validate_context(&updated_yaml, new_context.clone())?;
+        validate_context(&updated_yaml, &new_context)?;
 
-        if current_context != new_context {
-            updated_yaml["current-context"] = new_context;
+        if current_context != new_context.clone() {
+            updated_yaml["current-context"] = new_context.clone();
             println!(
                 "Updated the current context to use {}",
                 updated_yaml["current-context"]
@@ -225,34 +225,60 @@ pub mod mutate_contexts {
         }
     }
 
+    /// Sets the `namespace` of the currently active context, backing up the
+    /// file before writing.
+    ///
+    /// The context that matches `current-context` is updated; the `namespace`
+    /// key is created if absent, or replaced if already set. Unlike context
+    /// switching, the namespace value itself is not validated against the
+    /// cluster.
+    ///
+    /// # Arguments
+    /// * `config_path` - Path to the kubeconfig file to update
+    /// * `kube_context_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    /// * `namespace` - The namespace to set (as a string `Value`)
+    ///
+    /// # Returns
+    /// The namespace that was set.
+    ///
+    /// # Errors
+    /// Returns an error if the current context does not exist in the
+    /// kubeconfig, the `contexts` list is missing, the YAML cannot be
+    /// serialized, or the backup/write steps fail.
     pub fn set_namespace(
         config_path: PathBuf,
         kube_context_yaml: &Value,
-        namespace: Value,
+        namespace: &Value,
     ) -> Result<Value, Box<dyn std::error::Error>> {
+        // Ensure the cluster name exists as a context entry
+        let current_context = get_current_context(kube_context_yaml)?;
         let mut updated_yaml = kube_context_yaml.clone();
-        let current_context = get_current_context(&kube_context_yaml)?;
+        let context = validate_context(kube_context_yaml, &current_context)?;
 
-        // i have a mutable clone of update_yaml I can replace later with the new namespace
-        // i have the name of the currently set context
-        // data structure
-        //   "contexts": [
-        //    {
-        //      "context": {
-        //        "cluster": "orbstack",
-        //        "user": "orbstack",
-        //        "namespace": "default"
-        //      },
-        //      "name": "orbstack"
-        //    }
-        // ],
-        // "current-context": "orbstack",
-        //
-        // iterate through contexts[] and match corrent context, then add or set namespace: for that cluster
-        for current in updated_yaml["contexts"].as_str() {
-            println!("hi {:?}", current);
+        let contexts = updated_yaml["contexts"]
+            .as_sequence_mut()
+            .ok_or("Contexts list not found in KUBECONFIG")?;
+
+        //TODO: Upstream kubectx checks the live cluster for namespaces
+        // This is a longer term goal since it requires interfacing with the Kubernetes API
+        for ctx in contexts.iter_mut() {
+            if ctx["name"].as_str() == current_context.as_str() {
+                ctx["context"]["namespace"] = namespace.clone();
+                break;
+            }
         }
-        Ok(updated_yaml)
+
+        let yaml_data = yaml_serde::to_string(&updated_yaml)?;
+
+        let namespace_str = namespace
+            .as_str()
+            .unwrap_or("Unable to convert &Value to String");
+
+        backup_kubeconfig(&config_path)?;
+        copy_and_edit(&config_path, &yaml_data)?;
+        println!("Set namespace to {} for {}", namespace_str, context);
+
+        Ok(namespace.clone())
     }
 
     /// Deletes the given context from the kubeconfig, backing up the file
@@ -278,14 +304,14 @@ pub mod mutate_contexts {
         kube_config_yaml: &Value,
     ) -> Result<Value, Box<dyn std::error::Error>> {
         // Ensure the cluster name exists as a context entry
-        let context = validate_context(kube_config_yaml, cluster_name.clone())?;
+        let context = validate_context(kube_config_yaml, &cluster_name.clone())?;
 
         let mut deleted_yaml = kube_config_yaml.clone();
 
         // Read all the contexts into a Vec<Value>
         let contexts = deleted_yaml["contexts"]
             .as_sequence_mut()
-            .ok_or("Contexts mapping not found in KUBECONFIG")?;
+            .ok_or("Contexts list not found in KUBECONFIG")?;
 
         // If the supplied cluster name matches keep it, otherwise remove it from the Vec<Value>
         contexts.retain(|ctx| match ctx["name"].as_str() {
