@@ -30,6 +30,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             set_context(path, &kube_yaml, &name)?;
         }
+        Cli {
+            unset_context: true,
+            ..
+        } => {
+            unset_context(path, &kube_yaml)?;
+        }
         // If -n/--namespace is set, set the namespace for the current context
         Cli {
             namespace: Some(name),

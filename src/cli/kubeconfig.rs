@@ -268,6 +268,7 @@ pub mod mutate_contexts {
             }
         }
 
+        // TODO: Move this inside the for -
         let yaml_data = yaml_serde::to_string(&updated_yaml)?;
 
         let namespace_str = namespace
@@ -281,6 +282,36 @@ pub mod mutate_contexts {
         Ok(namespace.clone())
     }
 
+    /// Unsets `current-context` in the kubeconfig by setting it to an empty
+    /// string, backing up the file before writing.
+    ///
+    /// # Arguments
+    /// * `kubeconfig` - Path to the kubeconfig file to update (consumed by this call)
+    /// * `kube_config_yaml` - The kubeconfig document, as returned by `kubeconfig_to_yaml()`
+    ///
+    /// # Returns
+    /// The updated YAML document after `current-context` has been cleared.
+    ///
+    /// # Errors
+    /// Returns an error if the YAML cannot be serialized, or the backup/write
+    /// steps fail.
+    pub fn unset_context(
+        kubeconfig: PathBuf,
+        kube_config_yaml: &Value,
+    ) -> Result<Value, Box<dyn std::error::Error>> {
+        // Ensure the cluster name exists as a context entry
+        let mut updated_yaml = kube_config_yaml.clone();
+
+        updated_yaml["current-context"] = Value::String(String::new());
+        let yaml_data = yaml_serde::to_string(&updated_yaml)?;
+
+        // Backup the kubeconfig before modifying it
+        backup_kubeconfig(&kubeconfig)?;
+        copy_and_edit(&kubeconfig, &yaml_data)?;
+
+        println!("Unset the current context");
+        Ok(updated_yaml)
+    }
     /// Deletes the given context from the kubeconfig, backing up the file
     /// before writing.
     ///
@@ -305,7 +336,6 @@ pub mod mutate_contexts {
     ) -> Result<Value, Box<dyn std::error::Error>> {
         // Ensure the cluster name exists as a context entry
         let context = validate_context(kube_config_yaml, &cluster_name.clone())?;
-
         let mut deleted_yaml = kube_config_yaml.clone();
 
         // Read all the contexts into a Vec<Value>
