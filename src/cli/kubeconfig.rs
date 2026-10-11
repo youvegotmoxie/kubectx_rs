@@ -335,7 +335,7 @@ pub mod mutate_contexts {
         kube_config_yaml: &Value,
     ) -> Result<Value, Box<dyn std::error::Error>> {
         // Ensure the cluster name exists as a context entry
-        let context = validate_context(kube_config_yaml, &cluster_name.clone())?;
+        let context = validate_context(kube_config_yaml, &cluster_name)?;
         let mut deleted_yaml = kube_config_yaml.clone();
 
         // Read all the contexts into a Vec<Value>
