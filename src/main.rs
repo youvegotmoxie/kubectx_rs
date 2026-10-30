@@ -8,7 +8,7 @@ use cli::kubeconfig::setup_kubeconfig::*;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = cli::args::Command::parse();
 
-    // If -c/--config is set then overridde the KUBECONFIG env var
+    // If -c/--config is set then override the KUBECONFIG env var
     let path = match cli.config {
         Some(kube_config_path) => kube_config_path,
         None => kubeconfig_path()?,
