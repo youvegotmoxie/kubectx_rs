@@ -1,12 +1,12 @@
 use clap::Parser;
 
 mod cli;
-use cli::args::Cli;
+use cli::args::Command;
 use cli::kubeconfig::mutate_contexts::*;
 use cli::kubeconfig::setup_kubeconfig::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = cli::args::Cli::parse();
+    let cli = cli::args::Command::parse();
     let mut path = kubeconfig_path()?;
     let mut kube_yaml = kubeconfig_to_yaml(path.clone())?;
 
@@ -19,25 +19,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli {
         // If -d/--delete is set then delete the cluster from KUBECONFIG
         // This only removes the entry from the contexts map
-        Cli {
+        Command {
             delete: Some(name), ..
         } => {
             delete_context(path, name, &kube_yaml)?;
         }
         // If a cluster name is provided as the only argument and passes validation, set this to current-context
-        Cli {
+        Command {
             set: Some(name), ..
         } => {
             set_context(path, &kube_yaml, &name)?;
         }
-        Cli {
+        Command {
             unset_context: true,
             ..
         } => {
             unset_context(path, &kube_yaml)?;
         }
         // If -n/--namespace is set, set the namespace for the current context
-        Cli {
+        Command {
             namespace: Some(name),
             ..
         } => {

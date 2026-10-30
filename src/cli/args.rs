@@ -4,7 +4,7 @@ use yaml_serde::Value;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
-pub struct Cli {
+pub struct Command {
     #[arg(short, long, value_name = "NAME")]
     pub delete: Option<Value>,
 
