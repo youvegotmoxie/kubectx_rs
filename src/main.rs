@@ -7,14 +7,14 @@ use cli::kubeconfig::setup_kubeconfig::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = cli::args::Command::parse();
-    let mut path = kubeconfig_path()?;
-    let mut kube_yaml = kubeconfig_to_yaml(path.clone())?;
 
     // If -c/--config is set then overridde the KUBECONFIG env var
-    if let Some(kube_config_path) = cli.config {
-        path = kube_config_path.into();
-        kube_yaml = kubeconfig_to_yaml(path.clone())?;
-    }
+    let path = match cli.config {
+        Some(kube_config_path) => kube_config_path,
+        None => kubeconfig_path()?,
+    };
+
+    let kube_yaml = kubeconfig_to_yaml(path.clone())?;
 
     match cli {
         // If -d/--delete is set then delete the cluster from KUBECONFIG

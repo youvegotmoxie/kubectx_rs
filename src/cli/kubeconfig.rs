@@ -63,8 +63,9 @@ pub mod setup_kubeconfig {
     /// # Errors
     /// Returns an error if the file cannot be opened, read, or parsed as YAML.
     pub fn kubeconfig_to_yaml(kubeconfig: PathBuf) -> Result<Value, Box<dyn std::error::Error>> {
-        let yaml_data: Value =
-            yaml_serde::from_str(&std::io::read_to_string(File::open(kubeconfig)?)?)?;
+        let yaml_data: Value = yaml_serde::from_str(&std::io::read_to_string(
+            File::open(kubeconfig).map_err(|err| format!("Failed to open kubeconfig: {}", err))?,
+        )?)?;
 
         Ok(yaml_data)
     }
